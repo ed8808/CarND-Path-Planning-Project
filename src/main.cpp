@@ -1,4 +1,4 @@
-#include <uWS/uWS.h>
+l#include <uWS/uWS.h>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -91,21 +91,19 @@ int main() {
           double end_path_s = j[1]["end_path_s"];
           double end_path_d = j[1]["end_path_d"];
 
+		  /*################################################################################################################*/
+		  /*		Sensor Fusion for other traffic																			*/
+		  /*################################################################################################################*/
           // Sensor Fusion Data, a list of all other cars on the same side 
           //   of the road.
           auto sensor_fusion = j[1]["sensor_fusion"];
           
           bool lane_change=0;
-		  double max_vel = 49.5;
-          double min_vel = 1;
-  		  double ref_vel;
-          double safety = 30;
-          int path_size = previous_path_x.size();
-          
-          vector <double> carss_s;
+		  vector <double> carss_s;
           vector <double> carss_d;
           vector <double> carss_vx;
 		  
+		  /* Sensor Fusion Here */
           for(int i=0;i<sensor_fusion.size();i++)
           {
             int cars_id = sensor_fusion[i][0];
@@ -126,42 +124,54 @@ int main() {
           //for(int n : cars_close) {std::cout << n << " ";} std::cout << "\n";
           double t;
           
+		  // calculate distances among front cars in all lanes
           if(car_d - 2 < 1) t = cars_close[0];
           else if(car_d - 6 < 1) t = cars_close[2];
           else if(car_d - 10 < 1) t = cars_close[4];
              
+		  
+		  /* First detect if car in front is close or far away */
           if(t < safety*2)
           {               
+			//closing up: safety distance < threshold, lane change initiated, keep car speed
             lane_change=1;
           }
           else
           {
+			//far away: increment reference velocity +1 if no closing by car in front
             ref_vel += min_vel;
             lane_change=0;
           }
           
+		  // lane change state machine
           if(lane_change)
           {
             if(abs(car_d - 6) < 1)
             {
-              if(cars_close[0] > cars_close[2] && cars_close[1] > safety/2){
+              if(cars_close[0] > cars_close[2] && cars_close[1] > safety/2)
+			  {
+				//left lane front car is further away and left lane back car is not yet closing in, reduce speed to mid-lane front car not to reduce acceleration during lane change
                 ref_vel -= min_vel;
                 if(ref_vel < cars_close[2]) ref_vel = cars_close[2];
                 lane = 0;
               }
-              else if(cars_close[4] > cars_close[2]  && cars_close[5] > safety/2){
+              else if(cars_close[4] > cars_close[2]  && cars_close[5] > safety/2)
+			  {
+				//right lane front car is further away and right lane back car is not yet closing in, reduce speed to mid-lane front car not to reduce acceleration during lane change
                 ref_vel -= min_vel;
                 if(ref_vel < cars_close[2]) ref_vel = cars_close[2];
                 lane = 2;        
               }
               else if(t < safety)
               {
+				//front car is too close but unable to change lanes, reduce speed
                 ref_vel -= min_vel;
                 if(ref_vel < cars_close[2]) ref_vel = cars_close[2];
               }
             }
             else if(abs(car_d - 2) < 1)
             {
+			  //middle lane front car is further away and middle lane back car is not yet closing in, reduce speed to left front car not to reduce acceleration during lane change
               if(cars_close[2] > cars_close[0]  && cars_close[3] > safety/2){
                 ref_vel -= min_vel;
                 if(ref_vel < cars_close[0]) ref_vel = cars_close[0];
@@ -169,12 +179,14 @@ int main() {
               }
               else if(t < safety)
               {
+				//front car is too close but unable to change lanes, reduce speed
                 ref_vel -= min_vel;
                 if(ref_vel < cars_close[0]) ref_vel = cars_close[0];
               }
             }
             else if(abs(car_d - 10) < 1)
             {
+			  //middle lane front car is further away and middle lane back car is not yet closing in, reduce speed to right lane front car not to reduce acceleration during lane change
               if(cars_close[2] > cars_close[4]  && cars_close[3] > safety/2){
                 ref_vel -= min_vel;
                 if(ref_vel < cars_close[4]) ref_vel = cars_close[4];
@@ -182,15 +194,20 @@ int main() {
               }
               else if(t < safety)
               {
+				//front car is too close but unable to change lanes, reduce speed
                 ref_vel -= min_vel;
                 if(ref_vel < cars_close[4]) ref_vel = cars_close[4];
               }
             }
           }
           
+		  // bound min. and max. reference velocities
           if(ref_vel < min_vel) ref_vel = min_vel;
           if(ref_vel > max_vel) ref_vel = max_vel;
           
+		  /*################################################################################################################*/
+		  /*		Path Planning																							*/
+		  /*################################################################################################################*/
           vector <double> ptsx, ptsy;         
           double ref_x, ref_y, ref_yaw, ref_x_prev, ref_y_prev, ref_yaw_prev;
           ref_x = car_x;
@@ -200,6 +217,7 @@ int main() {
           ref_y_prev = ref_y - sin(ref_yaw);
           
           if (path_size < 2) {
+			// start from minimum velocity
             ref_vel = min_vel;
           }
           else{
@@ -210,11 +228,13 @@ int main() {
             ref_yaw = atan2((ref_y-ref_y_prev), (ref_x-ref_x_prev));
           }
           
+		  // Get 2 last XYs
           ptsx.push_back(ref_x_prev);
           ptsy.push_back(ref_y_prev);
           ptsx.push_back(ref_x);
           ptsy.push_back(ref_y);
 
+		  // Get 3 projected Frenet at 50, 70 and 90 further away from the car
           vector <double> next_wp0 = getXY(car_s+50, (2+4*lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
           vector <double> next_wp1 = getXY(car_s+70, (2+4*lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
           vector <double> next_wp2 = getXY(car_s+90, (2+4*lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
@@ -226,7 +246,8 @@ int main() {
           ptsy.push_back(next_wp0[1]);
           ptsy.push_back(next_wp1[1]);
           ptsy.push_back(next_wp2[1]);
-                   
+          
+		  // transform all XYs to car coordinates
           for(int i=0;i<ptsx.size();i++)
           {
             double shift_x = ptsx[i]-ref_x;
@@ -234,10 +255,11 @@ int main() {
             ptsx[i] = (shift_x * cos(0-ref_yaw) - shift_y * sin(0-ref_yaw));
             ptsy[i] = (shift_x * sin(0-ref_yaw) + shift_y * cos(0-ref_yaw));
           }
-             
+          // apply SPLINE to fit 5 pts   
           tk::spline s; 
           s.set_points(ptsx, ptsy);
           
+		  // save all last unprocessed XYs
           vector<double> next_x_vals;
           vector<double> next_y_vals;
           for(int i=0; i<path_size; i++)
@@ -252,6 +274,7 @@ int main() {
           
           double x_add_on = 0;            
           
+		  // generate all remaining points to reach 50 pts from last SPLINE
           for(int i=1;i<=50-path_size;i++)
           {  
             double N = (target_dist / (.02 * ref_vel/2.24));
@@ -263,6 +286,7 @@ int main() {
             double x_ref = x_point;
             double y_ref = y_point;
             
+			// transform back from the car to map coordinates
             x_point = (x_ref * cos(ref_yaw) - y_ref * sin(ref_yaw));
             y_point = (x_ref * sin(ref_yaw) + y_ref * cos(ref_yaw));
             
