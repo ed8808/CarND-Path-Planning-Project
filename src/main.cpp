@@ -104,7 +104,6 @@ int main() {
           double safety = 30;
           int path_size = previous_path_x.size();
 
-          bool lane_change=0;
 		  vector <double> carss_s;
           vector <double> carss_d;
           vector <double> carss_vx;
