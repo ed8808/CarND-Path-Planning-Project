@@ -97,7 +97,13 @@ int main() {
           // Sensor Fusion Data, a list of all other cars on the same side 
           //   of the road.
           auto sensor_fusion = j[1]["sensor_fusion"];
-          
+          bool lane_change=0;
+		  double max_vel = 49.5;
+          double min_vel = 1;
+  		  double ref_vel;
+          double safety = 30;
+          int path_size = previous_path_x.size();
+
           bool lane_change=0;
 		  vector <double> carss_s;
           vector <double> carss_d;
