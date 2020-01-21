@@ -7,13 +7,13 @@
 - rotation 
 4. Previous left over waypoints are directly fed into the first part of array.
 5. The remaining new waypoints are generated as follows: 
-i) distance to go for all remaining points, e.g. 10m in this code
-ii) partition the above distance by 10 / 0.02 * ref_speed 
+i) distance to go for all remaining points, e.g. 30m in this code
+ii) partition the above distance by 30 / 0.02 * ref_speed 
 6. Transform from car to map coordinates by rotation followed by shifting
 
 To avoid failing of acceleration to exceed 10ms-2:
-i) use progressively increment and decrement for speed changes
-ii) reduce speed to front vehicle speed when performing lane changing
+i) use progressively increment and decrement +/- 0.226mph per change for speed changes.  
+ii) reduce speed to 40mph when performing lane changing
 
 ## Obstacle Avoidance methodology
 ### Obstacle detection
