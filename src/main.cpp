@@ -97,9 +97,9 @@ int main() {
           // Sensor Fusion Data, a list of all other cars on the same side 
           //   of the road.
           auto sensor_fusion = j[1]["sensor_fusion"];
-          bool lane_change=0;
+          bool lane_change = 0;
 		  double max_vel = 49.5;
-          double min_vel = 1;
+          double min_vel = .224;
   		  double ref_vel;
           double safety = 30;
           int path_size = previous_path_x.size();
@@ -139,7 +139,8 @@ int main() {
           if(t < safety*2)
           {               
 			//closing up: safety distance < threshold, lane change initiated, keep car speed
-            lane_change=1;
+            ref_vel -= min_vel;
+			lane_change=1;
           }
           else
           {
@@ -155,17 +156,20 @@ int main() {
             {
               if(cars_close[0] > cars_close[2] && cars_close[1] > safety/2)
 			  {
-				//left lane front car is further away and left lane back car is not yet closing in, reduce speed to mid-lane front car not to reduce acceleration during lane change
+				//left lane front car is further away and left lane back car is not yet closing in, reduce speed to 40mph to reduce acceleration during lane change
                 ref_vel -= min_vel;
-                if(ref_vel < cars_close[2]) ref_vel = cars_close[2];
-                lane = 0;
+                if(ref_vel < max_vel-10){ 
+                  	ref_vel = max_vel-10;
+                	lane = 0;
+                }
               }
               else if(cars_close[4] > cars_close[2]  && cars_close[5] > safety/2)
 			  {
-				//right lane front car is further away and right lane back car is not yet closing in, reduce speed to mid-lane front car not to reduce acceleration during lane change
-                ref_vel -= min_vel;
-                if(ref_vel < cars_close[2]) ref_vel = cars_close[2];
-                lane = 2;        
+				//right lane front car is further away and right lane back car is not yet closing in, reduce speed to 40mph to reduce acceleration during lane change
+                if(ref_vel < max_vel-10){ 
+                  	ref_vel = max_vel-10;
+                	lane = 2;
+                }      
               }
               else if(t < safety)
               {
@@ -176,11 +180,12 @@ int main() {
             }
             else if(abs(car_d - 2) < 1)
             {
-			  //middle lane front car is further away and middle lane back car is not yet closing in, reduce speed to left front car not to reduce acceleration during lane change
+			  //middle lane front car is further away and middle lane back car is not yet closing in, reduce speed to 40mph to reduce acceleration during lane change
               if(cars_close[2] > cars_close[0]  && cars_close[3] > safety/2){
-                ref_vel -= min_vel;
-                if(ref_vel < cars_close[0]) ref_vel = cars_close[0];
-                lane = 1;
+                if(ref_vel < max_vel-10){ 
+                  	ref_vel = max_vel-10;
+                	lane = 1;
+                }
               }
               else if(t < safety)
               {
@@ -191,11 +196,12 @@ int main() {
             }
             else if(abs(car_d - 10) < 1)
             {
-			  //middle lane front car is further away and middle lane back car is not yet closing in, reduce speed to right lane front car not to reduce acceleration during lane change
+			  //middle lane front car is further away and middle lane back car is not yet closing in, reduce speed to 40mph to reduce acceleration during lane change
               if(cars_close[2] > cars_close[4]  && cars_close[3] > safety/2){
-                ref_vel -= min_vel;
-                if(ref_vel < cars_close[4]) ref_vel = cars_close[4];
-                lane = 1;
+                if(ref_vel < max_vel-10){ 
+                  	ref_vel = max_vel-10;
+                	lane = 1;
+                }
               }
               else if(t < safety)
               {
@@ -273,7 +279,7 @@ int main() {
             next_y_vals.push_back(previous_path_y[i]);
           }         
           
-          double target_x = 10.0;
+          double target_x = 30.0;
           double target_y = s(target_x);
           double target_dist = sqrt((target_x)*(target_x)+(target_y)*(target_y));
           
